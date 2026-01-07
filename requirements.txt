@@ -3,3 +3,8 @@ feedparser
 openai
 python-dotenv
 pandas
+gspread
+bcrypt
+streamlit-gsheets
+google-genai
+google-auth>=2.15.0,<2.42.0
