@@ -5,7 +5,6 @@ from rss_collector import fetch_rss_feeds
 from streamlit_gsheets import GSheetsConnection
 import bcrypt
 from google import genai
-import extra_streamlit_components as stx
 from dotenv import load_dotenv
 
 # .env 로드
