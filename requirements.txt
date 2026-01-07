@@ -5,6 +5,6 @@ python-dotenv
 pandas
 gspread
 bcrypt
-streamlit-gsheets
+st-gsheets-connection
 google-genai
 google-auth>=2.15.0,<2.42.0
