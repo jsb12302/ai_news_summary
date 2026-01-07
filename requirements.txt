@@ -8,4 +8,3 @@ bcrypt
 st-gsheets-connection
 google-genai
 google-auth>=2.15.0,<2.42.0
-extra-streamlit-components
