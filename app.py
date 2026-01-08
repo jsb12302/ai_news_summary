@@ -1,70 +1,64 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
-from rss_collector import fetch_rss_feeds
+from datetime import datetime, timedelta
+import time
 from streamlit_gsheets import GSheetsConnection
 import bcrypt
-from google import genai
+import extra_streamlit_components as stx
 from dotenv import load_dotenv
 
-# .env 로드
+# [중요] 방금 만든 파일에서 함수 불러오기
+from news_dashboard import render_news_section
+
 load_dotenv()
 
 # --- 앱 설정 --- #
 st.set_page_config(page_title="증시 핵심 요약", layout="wide")
 
-# --- CSS 스타일 (메인 테마) --- #
+# --- CSS 스타일 (전역 적용) --- #
 st.markdown("""
 <style>
-    /* 전체 배경 흰색 */
-    .stApp { 
-        background-color: #FFFFFF !important; 
-        color: #111827 !important; 
-    }
-    
-    /* 사이드바 스타일 유지 */
+    .stApp { background-color: #FFFFFF !important; color: #111827 !important; }
     [data-testid="stSidebar"] { background-color: #E3F2FD !important; }
     [data-testid="stSidebar"] .stMarkdown p { color: #0D47A1 !important; font-weight: bold; }
 
-    /* 뉴스 카드 (흰색 배경 + 연한 테두리) */
+    /* 뉴스 카드 스타일 */
     .news-card { 
-        background-color: #FFFFFF; 
-        padding: 20px; 
-        border-radius: 12px; 
-        margin-bottom: 15px; 
-        border: 1px solid #E5E7EB;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        background-color: #FFFFFF; padding: 20px; border-radius: 12px; 
+        margin-bottom: 15px; border: 1px solid #E5E7EB; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     .news-card h3 { color: #111827 !important; }
     .news-card p { color: #6B7280 !important; }
-
-    /* AI 결과창 (연한 파랑 배경) */
+    
+    /* AI 결과창 스타일 */
     .ai-result { 
-        background-color: #F0F7FF; 
-        color: #1E3A8A !important; 
-        padding: 20px; 
-        border-radius: 10px; 
-        border: 1px solid #3B82F6; 
-        line-height: 1.7;
+        background-color: #F0F7FF; color: #1E3A8A !important; padding: 20px; 
+        border-radius: 10px; border: 1px solid #3B82F6; line-height: 1.7;
     }
-
+    
     /* 버튼 스타일 */
     div.stButton > button:first-child { background-color: #3B82F6; color: white !important; border: none; }
     div.stButton > button[key^="ai_"] { background-color: #10B981 !important; color: white !important; border: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- 데이터 로드 및 시트 연결 --- #
+# --- 쿠키 매니저 초기화 --- #
+def get_manager():
+    return stx.CookieManager(key="main_cookie_handler")
+
+cookie_manager = get_manager()
+
+# --- 데이터 연결 --- #
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 @st.cache_data(ttl=2)
 def load_user_data():
     try:
-        return conn.read(worksheet="Users")
+        return conn.read(worksheet="Users", ttl=0)
     except:
         return pd.DataFrame(columns=['username', 'hashed_password', 'openai_api_key', 'gemini_api_key', 'created_at'])
 
-# --- 세션 로직 (쿠키 로직 제거) --- #
+# --- 세션 초기화 --- #
 if 'logged_in' not in st.session_state:
     st.session_state.update({
         'logged_in': False, 
@@ -72,15 +66,20 @@ if 'logged_in' not in st.session_state:
         'user_keys': {'GEMINI': None, 'OPENAI': None}
     })
 
-# --- Gemini 요약 함수 --- #
-def analyze_news_gemini(api_key, title, summary):
-    try:
-        client = genai.Client(api_key=api_key.strip())
-        prompt = f"투자 전문가로서 뉴스 분석: {title}\n내용: {summary}. 핵심요약, 시장영향, 투자포인트 작성."
-        response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
-        return response.text
-    except Exception as e:
-        return f"⚠️ 분석 실패: {str(e)}"
+# --- 쿠키 기반 자동 로그인 로직 --- #
+time.sleep(0.1) # 로드 대기
+saved_user = cookie_manager.get('auth_user')
+
+if saved_user and not st.session_state.logged_in:
+    df = load_user_data()
+    user_data = df[df['username'] == saved_user]
+    if not user_data.empty:
+        user = user_data.iloc[0]
+        st.session_state.update({
+            'logged_in': True,
+            'username': saved_user,
+            'user_keys': {'GEMINI': user.get('gemini_api_key'), 'OPENAI': user.get('openai_api_key')}
+        })
 
 # --- 사이드바 (로그인/회원가입) --- #
 with st.sidebar:
@@ -96,12 +95,15 @@ with st.sidebar:
                     if uid in df['username'].values:
                         user = df[df['username'] == uid].iloc[0]
                         if bcrypt.checkpw(upw.encode('utf-8'), str(user['hashed_password']).encode('utf-8')):
-                            # 세션 데이터만 업데이트
+                            # 세션 업데이트
                             st.session_state.update({
-                                'logged_in': True, 
-                                'username': uid, 
+                                'logged_in': True, 'username': uid, 
                                 'user_keys': {'GEMINI': user.get('gemini_api_key'), 'OPENAI': user.get('openai_api_key')}
                             })
+                            # 쿠키 저장
+                            cookie_manager.set('auth_user', uid, expires_at=datetime.now() + timedelta(minutes=30))
+                            st.success("로그인 성공!")
+                            time.sleep(1)
                             st.rerun()
                         else: st.error("비밀번호 불일치")
                     else: st.error("아이디 없음")
@@ -113,44 +115,23 @@ with st.sidebar:
                 noa = st.text_input("GPT API Key (선택)")
                 if st.form_submit_button("가입하기"):
                     df = load_user_data()
-                    if nid in df['username'].values: st.error("중복 아이디")
+                    if nid in df['username'].values: st.error("중복 아이디 입니다.")
                     else:
                         hashed = bcrypt.hashpw(npw.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
                         new_row = pd.DataFrame([{
-                            "username": nid, 
-                            "hashed_password": hashed, 
-                            "gemini_api_key": nge, 
-                            "openai_api_key": noa, 
+                            "username": nid, "hashed_password": hashed, 
+                            "gemini_api_key": nge, "openai_api_key": noa, 
                             "created_at": datetime.now().isoformat()
                         }])
                         conn.update(worksheet="Users", data=pd.concat([df, new_row], ignore_index=True))
                         st.success("가입 완료!")
     else:
         st.success(f"반가워요, {st.session_state.username}님!")
-        st.info("👈 사이드바 위의 메뉴에서 정보를 수정하세요.")
         if st.button("로그아웃"):
-            # 세션 정보 초기화 후 리런
+            cookie_manager.delete('auth_user')
             st.session_state.update({'logged_in': False, 'username': None, 'user_keys': {'GEMINI': None, 'OPENAI': None}})
+            time.sleep(1)
             st.rerun()
 
-# --- 메인 뉴스 화면 --- #
-st.title("📈 오늘의 증시 핵심 요약")
-
-if st.button("🔄 뉴스 새로고침"):
-    st.cache_data.clear()
-    st.rerun()
-
-news_df = fetch_rss_feeds(["https://www.mk.co.kr/rss/30100001/", "https://www.hankyung.com/feed/economy"])
-
-if not news_df.empty:
-    for idx, row in news_df.head(10).iterrows():
-        with st.container():
-            st.markdown(f'<div class="news-card"><h3>{row["title"]}</h3><p style="color:#6B7280;">{row["published"]} | <a href="{row["link"]}" target="_blank" style="color:#3B82F6;">기사 원문</a></p></div>', unsafe_allow_html=True)
-            if st.button(f"🤖 AI 분석 실행", key=f"ai_{idx}"):
-                if st.session_state.logged_in:
-                    if st.session_state.user_keys['GEMINI']:
-                        with st.spinner("AI 분석 중..."):
-                            res = analyze_news_gemini(st.session_state.user_keys['GEMINI'], row['title'], row['summary'])
-                            st.markdown(f'<div class="ai-result">{res}</div>', unsafe_allow_html=True)
-                    else: st.error("API 키를 등록해주세요.")
-                else: st.warning("로그인이 필요합니다.")
+# --- 메인 화면 호출 --- #
+render_news_section()
