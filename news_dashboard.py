@@ -1,6 +1,6 @@
 import streamlit as st
 from google import genai
-from rss_collector import fetch_rss_feeds, SOURCES
+from rss_collector import fetch_rss_feeds, fetch_naver_news, SOURCES
 
 # --- Gemini 요약 함수 ---
 def analyze_news_gemini(api_key, title, summary):
@@ -64,10 +64,10 @@ def render_news_section():
     st.title("📈 증시 핵심 요약 대시보드")
 
     # 1단계 메인 탭: 국내장, 미국장
-    tab_main_kor, tab_main_usa = st.tabs(["🇰🇷 국내장", "🇺🇸 미국장"])
+    tab_kor, tab_usa, tab_search = st.tabs(["🇰🇷 국내장", "🇺🇸 미국장", "🔍 뉴스 검색"])
 
     # --- 국내장 섹션 ---
-    with tab_main_kor:
+    with tab_kor:
         kor_source_names = list(SOURCES["KOREA"].keys())
         # 2단계 하위 탭: 국내 언론사 6개
         sub_tabs_kor = st.tabs(kor_source_names)
@@ -83,7 +83,7 @@ def render_news_section():
                 display_news_cards(news_df, f"KOR_{name}")
 
     # --- 미국장 섹션 ---
-    with tab_main_usa:
+    with tab_usa:
         usa_source_names = list(SOURCES["USA"].keys())
         # 2단계 하위 탭: 미국 관련 소스 2개
         sub_tabs_usa = st.tabs(usa_source_names)
@@ -97,3 +97,33 @@ def render_news_section():
 
                 news_df = fetch_rss_feeds("USA", source_name=name)
                 display_news_cards(news_df, f"USA_{name}")
+
+    # --- [신규] 뉴스 검색 탭 ---
+    with tab_search:
+        st.subheader("🔎 키워드로 뉴스 찾기")
+        # 검색 폼 사용 (엔터를 치거나 버튼을 누를 때만 실행)
+        with st.form(key="search_form"):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                query = st.text_input("검색어를 입력하세요", key="search_input_field")
+            with col2:
+                search_market = st.selectbox("시장", ["국내(Naver)", "해외(NewsAPI)"])
+
+            submit_btn = st.form_submit_button("검색 실행")
+
+        # 검색 버튼을 누르면 결과를 세션에 저장
+        if submit_btn and query:
+            with st.spinner(f"'{query}' 검색 중..."):
+                if search_market == "국내(Naver)":
+                    df_res = fetch_naver_news(query)
+                else:
+                    df_res = fetch_news_api(query)
+
+                # 검색 결과와 키워드를 세션에 저장 (핵심!)
+                st.session_state['last_search_df'] = df_res
+                st.session_state['last_query'] = query
+
+        # 페이지가 새로고침되어도 세션에 결과가 있으면 출력
+        if 'last_search_df' in st.session_state:
+            st.write(f"### '{st.session_state.last_query}' 검색 결과")
+            display_news_cards(st.session_state.last_search_df, "SEARCH_RESULT")

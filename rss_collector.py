@@ -1,6 +1,10 @@
 import feedparser
 import pandas as pd
 from datetime import datetime
+import requests
+import re
+import streamlit as st
+import toml
 
 # --- 뉴스 출처를 언론사별로 세분화하여 관리 ---
 SOURCES = {
@@ -20,6 +24,47 @@ SOURCES = {
         "매경글로벌": "https://www.mk.co.kr/rss/40300001/"
     }
 }
+
+# --- 1. 네이버 뉴스 검색 (국내) ---
+def fetch_naver_news(query="증시"):
+    # 2. 방어적 로직: secrets에서 안전하게 키 가져오기
+    try:
+        # st.secrets.get()을 사용하면 키가 없을 때 None을 반환하여 에러를 막을 수 있습니다.
+        NAVER_ID = st.secrets.get("NAVER_ID")
+        NAVER_SECRET = st.secrets.get("NAVER_SECRET")
+
+        if not NAVER_ID or not NAVER_SECRET:
+            st.error("API 키가 설정되지 않았습니다. .streamlit/secrets.toml을 확인하세요.")
+            return pd.DataFrame()
+
+    except Exception as e:
+        st.error(f"Secrets 로드 중 오류: {e}")
+        return pd.DataFrame()
+
+    url = "https://openapi.naver.com/v1/search/news.json"
+    headers = {"X-Naver-Client-Id": NAVER_ID, "X-Naver-Client-Secret": NAVER_SECRET}
+    refined_query = f"{query} +(증권|공시|주가|주식)"
+    params = {"query": query, "display": 15, "sort": "date"}
+    try:
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code == 200:
+            print(f"✅ Naver API 호출 성공: {query}")
+            items = res.json().get('items', [])
+            data = []
+            for item in items:
+                data.append({
+                    'title': re.sub('<[^<]+?>', '', item['title']),
+                    'link': item['link'],
+                    'published': datetime.strptime(item['pubDate'], '%a, %d %b %Y %H:%M:%S +0900'),
+                    'summary': re.sub('<[^<]+?>', '', item['description'])
+                })
+            return pd.DataFrame(data)
+        else:
+            print(f"❌ Naver API 오류: {res.status_code} - {res.text}")
+            return pd.DataFrame()
+    except Exception as e:
+        print(f"⚠️ Naver API 연결 실패: {e}")
+        return pd.DataFrame()
 
 def fetch_rss_feeds(market_type="KOREA", source_name=None):
     """
