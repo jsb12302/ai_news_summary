@@ -2,6 +2,11 @@ import streamlit as st
 from google import genai
 from rss_collector import fetch_rss_feeds, fetch_naver_news, SOURCES
 
+# CSS 파일을 불러오는 유틸리티 함수
+def local_css(file_name):
+    with open(file_name, encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 # --- Gemini 요약 함수 ---
 def analyze_news_gemini(api_key, title, summary):
     try:
@@ -14,6 +19,7 @@ def analyze_news_gemini(api_key, title, summary):
 
 # --- 개별 뉴스 카드 렌더링 함수 ---
 def display_news_cards(df, market_key):
+    local_css("style_global.css")
     if df.empty:
         st.info("표시할 뉴스가 없습니다.")
         return
@@ -43,24 +49,6 @@ def display_news_cards(df, market_key):
 
 # --- 메인 뉴스 화면 렌더링 함수 ---
 def render_news_section():
-    st.markdown("""
-            <style>
-                /* 메인 상단 탭 스타일 */
-                button[data-baseweb="tab"] {
-                    flex: 1 !important;
-                    text-align: center !important;
-                }
-                button[data-baseweb="tab"] p {
-                    font-size: 1.3rem !important;
-                    font-weight: 700 !important;
-                }
-                /* 하위 탭(언론사별) 글씨 크기 조정 */
-                .stTabs [data-baseweb="tab"] p {
-                    font-size: 1rem !important;
-                }
-            </style>
-        """, unsafe_allow_html=True)
-
     st.title("📈 증시 핵심 요약 대시보드")
 
     # 1단계 메인 탭: 국내장, 미국장

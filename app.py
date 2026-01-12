@@ -10,69 +10,15 @@ from dotenv import load_dotenv
 # [중요] 방금 만든 파일에서 함수 불러오기
 from news_dashboard import render_news_section
 
-load_dotenv()
+def local_css(file_name):
+    with open(file_name, encoding="utf-8") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# --- 앱 설정 --- #
+# 페이지 설정 직후 호출
 st.set_page_config(page_title="증시 핵심 요약", layout="wide")
+local_css("style_global.css")
 
-# --- CSS 스타일 (전역 적용) --- #
-st.markdown("""
-<style>
-    /* 1. 상단 헤더 영역 투명화 및 높이 조정 */
-    [data-testid="stHeader"] {
-        background-color: rgba(0,0,0,0) !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-
-    /* 2. Deploy 버튼 및 관련 컨테이너 완전 삭제 (mypage 포함 전역) */
-    .stAppDeployButton,
-    div[data-testid="stAppDeployButton"],
-    button[kind="header"] {
-        display: none !important;
-    }
-
-    /* 3. 메인 메뉴(점 세개) 및 관련 컨테이너 완전 삭제 */
-    #MainMenu,
-    [data-testid="stMainMenu"],
-    .st-emotion-cache-czk5ss {
-        display: none !important;
-    }
-
-    /* 4. 하단 푸터 삭제 */
-    footer {
-        display: none !important;
-    }
-
-    /* 5. 사이드바 열기/닫기 버튼(왼쪽)만 살리기 */
-    /* 위에서 버튼을 지웠으므로 왼쪽 버튼은 명시적으로 보이게 설정 */
-    [data-testid="stHeader"] button[data-testid="stBaseButton-headerNoPadding"] {
-        display: inline-flex !important;
-    }
-
-    .stApp { background-color: #FFFFFF !important; color: #111827 !important; }
-    [data-testid="stSidebar"] { background-color: #E3F2FD !important; }
-    [data-testid="stSidebar"] .stMarkdown p { color: #0D47A1 !important; font-weight: bold; }
-
-    /* 뉴스 카드 스타일 */
-    .news-card {
-        background-color: #FFFFFF; padding: 20px; border-radius: 12px;
-        margin-bottom: 15px; border: 1px solid #E5E7EB; box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .news-card h3 { color: #111827 !important; }
-    .news-card p { color: #6B7280 !important; }
-
-    /* AI 결과창 스타일 */
-    .ai-result {
-        background-color: #F0F7FF; color: #1E3A8A !important; padding: 20px;
-        border-radius: 10px; border: 1px solid #3B82F6; line-height: 1.7;
-    }
-
-    /* 버튼 스타일 */
-    div.stButton > button:first-child { background-color: #3B82F6; color: white !important; border: none; }
-    div.stButton > button[key^="ai_"] { background-color: #10B981 !important; color: white !important; border: none; }
-</style>
-""", unsafe_allow_html=True)
+load_dotenv()
 
 # --- 데이터 연결 --- #
 conn = st.connection("gsheets", type=GSheetsConnection)
