@@ -7,7 +7,7 @@ def analyze_news_gemini(api_key, title, summary):
     try:
         client = genai.Client(api_key=api_key.strip())
         prompt = f"투자 전문가로서 뉴스 분석: {title}\n내용: {summary}. 핵심요약, 시장영향, 투자포인트 작성."
-        response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+        response = client.models.generate_content(model="gemini-3-flash-preview", contents=prompt)
         return response.text
     except Exception as e:
         return f"⚠️ 분석 실패: {str(e)}"

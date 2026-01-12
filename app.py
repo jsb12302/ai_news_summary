@@ -18,6 +18,21 @@ st.set_page_config(page_title="증시 핵심 요약", layout="wide")
 # --- CSS 스타일 (전역 적용) --- #
 st.markdown("""
 <style>
+    /* 상단 헤더 전체 숨기기 (GitHub 아이콘, Deploy 버튼 등) */
+    header[data-testid="stHeader"] {
+        visibility: hidden;
+        height: 0%;
+    }
+
+    /* 하단 푸터(Made with Streamlit) 숨기기 */
+    footer {
+        visibility: hidden;
+    }
+
+    /* 우측 상단 메뉴 버튼(점 세개) 숨기기 */
+    #MainMenu {
+        visibility: hidden;
+    }
     .stApp { background-color: #FFFFFF !important; color: #111827 !important; }
     [data-testid="stSidebar"] { background-color: #E3F2FD !important; }
     [data-testid="stSidebar"] .stMarkdown p { color: #0D47A1 !important; font-weight: bold; }
