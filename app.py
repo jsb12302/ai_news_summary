@@ -18,21 +18,38 @@ st.set_page_config(page_title="증시 핵심 요약", layout="wide")
 # --- CSS 스타일 (전역 적용) --- #
 st.markdown("""
 <style>
-    /* 상단 헤더 전체 숨기기 (GitHub 아이콘, Deploy 버튼 등) */
-    header[data-testid="stHeader"] {
-        visibility: hidden;
-        height: 0%;
+    /* 1. 상단 헤더 영역 투명화 및 높이 조정 */
+    [data-testid="stHeader"] {
+        background-color: rgba(0,0,0,0) !important;
+        border: none !important;
+        box-shadow: none !important;
     }
 
-    /* 하단 푸터(Made with Streamlit) 숨기기 */
+    /* 2. Deploy 버튼 및 관련 컨테이너 완전 삭제 (mypage 포함 전역) */
+    .stAppDeployButton,
+    div[data-testid="stAppDeployButton"],
+    button[kind="header"] {
+        display: none !important;
+    }
+
+    /* 3. 메인 메뉴(점 세개) 및 관련 컨테이너 완전 삭제 */
+    #MainMenu,
+    [data-testid="stMainMenu"],
+    .st-emotion-cache-czk5ss {
+        display: none !important;
+    }
+
+    /* 4. 하단 푸터 삭제 */
     footer {
-        visibility: hidden;
+        display: none !important;
     }
 
-    /* 우측 상단 메뉴 버튼(점 세개) 숨기기 */
-    #MainMenu {
-        visibility: hidden;
+    /* 5. 사이드바 열기/닫기 버튼(왼쪽)만 살리기 */
+    /* 위에서 버튼을 지웠으므로 왼쪽 버튼은 명시적으로 보이게 설정 */
+    [data-testid="stHeader"] button[data-testid="stBaseButton-headerNoPadding"] {
+        display: inline-flex !important;
     }
+
     .stApp { background-color: #FFFFFF !important; color: #111827 !important; }
     [data-testid="stSidebar"] { background-color: #E3F2FD !important; }
     [data-testid="stSidebar"] .stMarkdown p { color: #0D47A1 !important; font-weight: bold; }
@@ -113,11 +130,12 @@ with st.sidebar:
                             # 1. 고유 세션 토큰 생성 (보안 강화)
                             new_token = secrets.token_urlsafe(32)
 
-                            # 2. 구글 시트에 토큰 업데이트
+                            # 2. [DB 업데이트] 토큰과 마지막 로그인 시간 저장
                             df.loc[df['username'] == uid, 'session_token'] = new_token
+                            df.loc[df['username'] == uid, 'last_login'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             conn.update(worksheet="Users", data=df)
 
-                            # 3. 세션 및 URL 파라미터 업데이트
+                            # 3. 세션 업데이트
                             st.session_state.update({
                                 'logged_in': True, 'username': uid,
                                 'user_keys': {'GEMINI': user.get('gemini_api_key'), 'OPENAI': user.get('openai_api_key')}

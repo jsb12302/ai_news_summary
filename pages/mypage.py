@@ -9,6 +9,38 @@ st.set_page_config(page_title="마이페이지", layout="wide")
 # --- CSS 스타일 (바깥쪽 테두리 완전 제거 및 라이트 모드 최적화) ---
 st.markdown("""
 <style>
+    /* 1. 상단 헤더 영역 투명화 및 높이 조정 */
+    [data-testid="stHeader"] {
+        background-color: rgba(0,0,0,0) !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* 2. Deploy 버튼 및 관련 컨테이너 완전 삭제 (mypage 포함 전역) */
+    .stAppDeployButton,
+    div[data-testid="stAppDeployButton"],
+    button[kind="header"] {
+        display: none !important;
+    }
+
+    /* 3. 메인 메뉴(점 세개) 및 관련 컨테이너 완전 삭제 */
+    #MainMenu,
+    [data-testid="stMainMenu"],
+    .st-emotion-cache-czk5ss {
+        display: none !important;
+    }
+
+    /* 4. 하단 푸터 삭제 */
+    footer {
+        display: none !important;
+    }
+
+    /* 5. 사이드바 열기/닫기 버튼(왼쪽)만 살리기 */
+    /* 위에서 버튼을 지웠으므로 왼쪽 버튼은 명시적으로 보이게 설정 */
+    [data-testid="stHeader"] button[data-testid="stBaseButton-headerNoPadding"] {
+        display: inline-flex !important;
+    }
+
     /* 1. 전체 앱 배경 흰색 */
     .stApp { 
         background-color: #FFFFFF !important; 
