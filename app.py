@@ -7,6 +7,7 @@ from streamlit_gsheets import GSheetsConnection
 import bcrypt
 from dotenv import load_dotenv
 from admin_page import render_admin_page
+from qna_page import render_qna_page
 
 # [중요] 방금 만든 파일에서 함수 불러오기
 from news_dashboard import render_news_section
@@ -126,7 +127,7 @@ with st.sidebar:
     else:
         st.success(f"반가워요, {st.session_state.username}님!")
 
-        main_menu = ["뉴스 대시보드"]
+        main_menu = ["뉴스 대시보드", "1:1 질문"]
         if st.session_state.is_admin:
             main_menu.append("🛠️ 어드민 설정")
 
@@ -147,9 +148,9 @@ with st.sidebar:
 if st.session_state.logged_in:
     if selected_page == "뉴스 대시보드":
         render_news_section()
+    elif selected_page == "1:1 질문":
+            render_qna_page(conn) # QnA 페이지 호출
     elif selected_page == "🛠️ 어드민 설정":
-        # 분리한 어드민 페이지 호출
-        # 데이터 연결 객체(conn)와 데이터 로드 함수(load_user_data)를 인자로 넘깁니다.
         render_admin_page(conn, load_user_data)
 else:
     # 비로그인 시 기본 화면
