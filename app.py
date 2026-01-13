@@ -6,6 +6,7 @@ import secrets  # 보안 토큰 생성용
 from streamlit_gsheets import GSheetsConnection
 import bcrypt
 from dotenv import load_dotenv
+from admin_page import render_admin_page
 
 # [중요] 방금 만든 파일에서 함수 불러오기
 from news_dashboard import render_news_section
@@ -27,6 +28,9 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 def load_user_data():
     try:
         return conn.read(worksheet="Users", ttl=0)
+        if 'role' not in df.columns:
+            df['role'] = 'user'
+        return df
     except:
         return pd.DataFrame(columns=['username', 'hashed_password', 'openai_api_key', 'gemini_api_key', 'session_token', 'created_at'])
 
@@ -35,6 +39,7 @@ if 'logged_in' not in st.session_state:
     st.session_state.update({
         'logged_in': False,
         'username': None,
+        'is_admin': False,
         'user_keys': {'GEMINI': None, 'OPENAI': None}
     })
 
@@ -55,6 +60,7 @@ if url_token and not st.session_state.logged_in:
         st.session_state.update({
             'logged_in': True,
             'username': user['username'],
+            'is_admin': str(user.get('role')).lower() == 'admin',
             'user_keys': {'GEMINI': user.get('gemini_api_key'), 'OPENAI': user.get('openai_api_key')}
         })
         # 자동 로그인 성공 후 화면 유지
@@ -83,7 +89,9 @@ with st.sidebar:
 
                             # 3. 세션 업데이트
                             st.session_state.update({
-                                'logged_in': True, 'username': uid,
+                                'logged_in': True,
+                                'username': uid,
+                                'is_admin': str(user.get('role')).lower() == 'admin', # 권한 확인
                                 'user_keys': {'GEMINI': user.get('gemini_api_key'), 'OPENAI': user.get('openai_api_key')}
                             })
 
@@ -110,12 +118,20 @@ with st.sidebar:
                             "gemini_api_key": nge,
                             "openai_api_key": noa,
                             "session_token": "", # 초기 토큰은 비어있음
-                            "created_at": datetime.now().isoformat()
+                            "created_at": datetime.now().isoformat(),
+                            "role": "user"
                         }])
                         conn.update(worksheet="Users", data=pd.concat([df, new_row], ignore_index=True))
                         st.success("가입 완료!")
     else:
         st.success(f"반가워요, {st.session_state.username}님!")
+
+        main_menu = ["뉴스 대시보드"]
+        if st.session_state.is_admin:
+            main_menu.append("🛠️ 어드민 설정")
+
+        selected_page = st.radio("이동", main_menu)
+
         if st.button("로그아웃"):
             # 로그아웃 시 시트의 토큰 무효화 (보안)
             df = load_user_data()
@@ -127,5 +143,14 @@ with st.sidebar:
             st.query_params.clear()
             st.rerun()
 
-# --- 메인 화면 호출 --- #
-render_news_section()
+# --- 메인 컨텐츠 제어 --- #
+if st.session_state.logged_in:
+    if selected_page == "뉴스 대시보드":
+        render_news_section()
+    elif selected_page == "🛠️ 어드민 설정":
+        # 분리한 어드민 페이지 호출
+        # 데이터 연결 객체(conn)와 데이터 로드 함수(load_user_data)를 인자로 넘깁니다.
+        render_admin_page(conn, load_user_data)
+else:
+    # 비로그인 시 기본 화면
+    render_news_section()
