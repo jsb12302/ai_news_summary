@@ -8,6 +8,7 @@ import bcrypt
 from dotenv import load_dotenv
 from admin_page import render_admin_page
 from qna_page import render_qna_page
+from mypage import render_mypage
 
 # [중요] 방금 만든 파일에서 함수 불러오기
 from news_dashboard import render_news_section
@@ -127,7 +128,7 @@ with st.sidebar:
     else:
         st.success(f"반가워요, {st.session_state.username}님!")
 
-        main_menu = ["뉴스 대시보드", "1:1 질문"]
+        main_menu = ["뉴스 대시보드", "1:1 질문", "마이페이지"]
         if st.session_state.is_admin:
             main_menu.append("🛠️ 어드민 설정")
 
@@ -149,7 +150,10 @@ if st.session_state.logged_in:
     if selected_page == "뉴스 대시보드":
         render_news_section()
     elif selected_page == "1:1 질문":
-            render_qna_page(conn) # QnA 페이지 호출
+        render_qna_page(conn) # QnA 페이지 호출
+    elif selected_page == "마이페이지":
+        # 세션 공유를 위해 마이페이지 함수 호출
+        render_mypage(conn)
     elif selected_page == "🛠️ 어드민 설정":
         render_admin_page(conn, load_user_data)
 else:
