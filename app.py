@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from admin_page import render_admin_page
 from qna_page import render_qna_page
 from mypage import render_mypage
+from notice_page import render_notice_manager
 
 # [중요] 방금 만든 파일에서 함수 불러오기
 from news_dashboard import render_news_section
@@ -130,6 +131,7 @@ with st.sidebar:
 
         main_menu = ["뉴스 대시보드", "1:1 질문", "마이페이지"]
         if st.session_state.is_admin:
+            main_menu.append("📢 공지사항 관리")
             main_menu.append("🛠️ 어드민 설정")
 
         selected_page = st.radio("이동", main_menu)
@@ -152,8 +154,9 @@ if st.session_state.logged_in:
     elif selected_page == "1:1 질문":
         render_qna_page(conn) # QnA 페이지 호출
     elif selected_page == "마이페이지":
-        # 세션 공유를 위해 마이페이지 함수 호출
         render_mypage(conn)
+    elif selected_page == "📢 공지사항 관리": # 새로 만든 페이지 연결
+        render_notice_manager(conn)
     elif selected_page == "🛠️ 어드민 설정":
         render_admin_page(conn, load_user_data)
 else:

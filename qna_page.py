@@ -7,6 +7,18 @@ def render_qna_page(conn):
     st.title("✉️ 1:1 문의 게시판")
     st.markdown("---")
 
+    # --- [공통] 공지사항 불러오기 섹션 ---
+    try:
+        notice_df = conn.read(worksheet="Notice", ttl=0)
+        if not notice_df.empty:
+            st.subheader("📢 공지사항")
+            for _, n_row in notice_df.sort_values(by="created_at", ascending=False).iterrows():
+                with st.expander(f"📌 {n_row['title']} ({n_row['created_at']})"):
+                    st.write(n_row['content'])
+            st.markdown("---")
+    except:
+        pass
+
     # 기본 컬럼 정의
     required_columns = ['username', 'question', 'answer', 'status', 'created_at', 'replied_at']
 

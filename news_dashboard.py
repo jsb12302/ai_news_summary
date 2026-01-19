@@ -95,7 +95,7 @@ def render_news_section():
             with col1:
                 query = st.text_input("검색어를 입력하세요", key="search_input_field")
             with col2:
-                search_market = st.selectbox("시장", ["국내(Naver)", "해외(NewsAPI)"])
+                search_market = st.selectbox("시장", ["국내(Naver)"])
 
             submit_btn = st.form_submit_button("검색 실행")
 
@@ -104,8 +104,6 @@ def render_news_section():
             with st.spinner(f"'{query}' 검색 중..."):
                 if search_market == "국내(Naver)":
                     df_res = fetch_naver_news(query)
-                else:
-                    df_res = fetch_news_api(query)
 
                 # 검색 결과와 키워드를 세션에 저장 (핵심!)
                 st.session_state['last_search_df'] = df_res
